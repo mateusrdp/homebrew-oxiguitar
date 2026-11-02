@@ -103,8 +103,15 @@ paths=""
 while read -r f; do
     artifacts+="  artifact \"$f\", target: \"~/Library/Application Support/OxiGuitar/plugins/$f\""$'\n'
     trash+="    \"~/Library/Application Support/OxiGuitar/plugins/$f\","$'\n'
+    first_trash="${first_trash:-~/Library/Application Support/OxiGuitar/plugins/$f}"
     paths+="      \"#{Dir.home}/Library/Application Support/OxiGuitar/plugins/$f\","$'\n'
 done <<< "$files"
+# Homebrew's style wants a single path bare and several in an array.
+if [[ "$(wc -l <<< "$files")" -eq 1 ]]; then
+    trash="\"$first_trash\""
+else
+    trash="["$'\n'"$trash  ]"
+fi
 depends=""
 for c in ${PLUGIN_DEPENDS-}; do
     depends+="  depends_on cask: \"mateusrdp/oxiguitar/$c\""$'\n'
@@ -124,17 +131,14 @@ cask "$cask" do
 ${depends}${artifacts}
   # The plugin is ad-hoc signed, not notarized (no Apple certificate is paid
   # for), so the mark the download leaves on it is taken off.
-  postflight do
+  postflight do # rubocop:disable Cask/InstallSteps
     [
 ${paths}    ].each do |path|
-      system_command "/usr/bin/xattr",
-                     args: ["-d", "com.apple.quarantine", path],
-                     must_succeed: false
+      system_command "/usr/bin/xattr", args: ["-d", "com.apple.quarantine", path], must_succeed: false
     end
   end
 
-  zap trash: [
-${trash}  ]
+  zap trash: ${trash}
 end
 CASK
 echo "Casks/$cask.rb: $version ($(wc -l <<< "$files") plugin file(s))"
