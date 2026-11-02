@@ -1,0 +1,74 @@
+# Updates the cask of a repository whose release was just published, as a pull
+# request into develop (merging it is what updates the tap).
+#
+# Started by the `plugin-published` event, which the publish workflow of each
+# OxiGuitar repository sends (secret PACKAGES_TOKEN over there), or by hand
+# with the repository and the tag.
+#
+# Needs the secret PACKAGES_TOKEN in this repository too: a token of the
+# maintainer's that can write contents and pull requests here. A pull request
+# made with the built-in token would not start CI, and could not be merged.
+name: Update a cask
+
+on:
+  repository_dispatch:
+    types: [plugin-published]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "The repository, such as mateusrdp/oxiguitar-midi"
+        required: true
+      tag:
+        description: "The release's tag, such as v0.1.0"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-cask
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Make the pull request
+    runs-on: ubuntu-24.04
+    env:
+      REPOSITORY: ${{ github.event.client_payload.repository || inputs.repository }}
+      TAG: ${{ github.event.client_payload.tag || inputs.tag }}
+      GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+    steps:
+      - name: Check the inputs
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::The secret PACKAGES_TOKEN isn't set."
+            exit 1
+          fi
+          [[ "$REPOSITORY" =~ ^mateusrdp/oxiguitar(-[a-z0-9-]+)?$ ]] || { echo "::error::Not an OxiGuitar repository: $REPOSITORY"; exit 1; }
+          [[ "$TAG" =~ ^v[0-9][0-9A-Za-z.+~-]*$ ]] || { echo "::error::Not a version tag: $TAG"; exit 1; }
+      - uses: actions/checkout@v5
+        with:
+          ref: develop
+          token: ${{ secrets.PACKAGES_TOKEN }}
+      - name: Write the cask
+        env:
+          # NAM needs the MIDI plugin; the others need nothing.
+          PLUGIN_DEPENDS: ${{ endsWith(github.event.client_payload.repository || inputs.repository, '-nam') && 'oxiguitar-midi' || '' }}
+        run: scripts/make-cask.sh "$REPOSITORY" "$TAG"
+      - name: Open the pull request
+        run: |
+          if [[ -z "$(git status --porcelain Casks)" ]]; then
+            echo "Nothing changed: $REPOSITORY $TAG is in the tap already, or has no macOS file."
+            exit 0
+          fi
+          branch="update-${REPOSITORY#mateusrdp/}-$TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add Casks
+          git commit -s -q -m "Update ${REPOSITORY#mateusrdp/} to $TAG"
+          git push -q origin "$branch"
+          jq -n --arg title "Update ${REPOSITORY#mateusrdp/} to $TAG" --arg head "$branch" \
+            --arg body "The cask of $REPOSITORY $TAG, made by scripts/make-cask.sh from the release's macOS file and its SHA256SUMS. Merging it updates the tap." \
+            '{title: $title, head: $head, base: "develop", body: $body}' \
+            | gh api "repos/$GITHUB_REPOSITORY/pulls" --input - --jq .html_url

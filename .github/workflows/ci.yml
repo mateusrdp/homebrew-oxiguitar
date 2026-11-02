@@ -37,7 +37,7 @@ jobs:
     outputs:
       present: ${{ steps.look.outputs.present }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: look
         run: |
           if [ -f Cargo.toml ]; then echo "present=true"; else echo "present=false"; fi >> "$GITHUB_OUTPUT"
@@ -48,7 +48,7 @@ jobs:
     if: needs.rust.outputs.present == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -60,7 +60,7 @@ jobs:
     if: needs.rust.outputs.present == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # Lints run on the minimum supported Rust, so CI and contributors'
       # machines agree and a new upstream lint cannot turn CI red overnight.
       - uses: dtolnay/rust-toolchain@master
@@ -101,7 +101,7 @@ jobs:
           - { name: Windows ARM64, os: windows-11-arm, toolchain: stable }
           - { name: macOS, os: macos-15, toolchain: stable }
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain == 'msrv' && env.MSRV || matrix.toolchain }}
@@ -137,7 +137,7 @@ jobs:
     if: needs.rust.outputs.present == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
@@ -148,7 +148,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: >-
@@ -156,10 +156,41 @@ jobs:
           "${{ github.event.pull_request.base.sha }}"
           "${{ github.event.pull_request.head.sha }}"
 
+  casks:
+    name: Casks (style, install)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shellcheck
+        run: |
+          brew install shellcheck
+          shellcheck scripts/*.sh
+      - name: Style and install every cask
+        run: |
+          shopt -s nullglob
+          casks=(Casks/*.rb)
+          if [[ ${#casks[@]} -eq 0 ]]; then
+            echo "No casks yet."
+            exit 0
+          fi
+          brew tap mateusrdp/oxiguitar "$PWD"
+          brew style "${casks[@]}"
+          for c in "${casks[@]}"; do
+            name="$(basename "$c" .rb)"
+            brew install --cask "mateusrdp/oxiguitar/$name"
+            # Nothing a cask installed may still carry the download's quarantine mark.
+            for f in "$HOME/Library/Application Support/OxiGuitar/plugins/"*.oxp; do
+              if xattr -p com.apple.quarantine "$f" 2> /dev/null; then
+                echo "::error::$f is still quarantined after installing $name"
+                exit 1
+              fi
+            done
+          done
+
   ci-success:
     name: ci-success
     if: always()
-    needs: [rust, fmt, lint, test, deny, dco]
+    needs: [rust, fmt, lint, test, deny, dco, casks]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed
