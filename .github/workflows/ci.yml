@@ -174,7 +174,10 @@ jobs:
             exit 0
           fi
           brew tap mateusrdp/oxiguitar "$PWD"
-          brew style "${casks[@]}"
+          # Cask/InstallSteps asks for postflight_steps, which has no step that
+          # runs a command; the plugin casks need xattr to clear the quarantine
+          # mark. Homebrew also refuses disable comments in the casks.
+          brew style --except-cops Cask/InstallSteps "${casks[@]}"
           for c in "${casks[@]}"; do
             name="$(basename "$c" .rb)"
             brew install --cask "mateusrdp/oxiguitar/$name"
