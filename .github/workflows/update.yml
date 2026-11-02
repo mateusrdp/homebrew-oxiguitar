@@ -67,7 +67,9 @@ jobs:
           git checkout -b "$branch"
           git add Casks
           git commit -s -q -m "Update ${REPOSITORY#mateusrdp/} to $TAG"
-          git push -q origin "$branch"
+          # The branch is made here, from develop, every time: a rerun for the
+          # same release (its pull request closed, its branch left behind) replaces it.
+          git push -q --force origin "$branch"
           jq -n --arg title "Update ${REPOSITORY#mateusrdp/} to $TAG" --arg head "$branch" \
             --arg body "The cask of $REPOSITORY $TAG, made by scripts/make-cask.sh from the release's macOS file and its SHA256SUMS. Merging it updates the tap." \
             '{title: $title, head: $head, base: "develop", body: $body}' \
