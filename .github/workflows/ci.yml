@@ -156,10 +156,41 @@ jobs:
           "${{ github.event.pull_request.base.sha }}"
           "${{ github.event.pull_request.head.sha }}"
 
+  casks:
+    name: Casks (style, install)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shellcheck
+        run: |
+          brew install shellcheck
+          shellcheck scripts/*.sh
+      - name: Style and install every cask
+        run: |
+          shopt -s nullglob
+          casks=(Casks/*.rb)
+          if [[ ${#casks[@]} -eq 0 ]]; then
+            echo "No casks yet."
+            exit 0
+          fi
+          brew tap mateusrdp/oxiguitar "$PWD"
+          brew style "${casks[@]}"
+          for c in "${casks[@]}"; do
+            name="$(basename "$c" .rb)"
+            brew install --cask "mateusrdp/oxiguitar/$name"
+            # Nothing a cask installed may still carry the download's quarantine mark.
+            for f in "$HOME/Library/Application Support/OxiGuitar/plugins/"*.oxp; do
+              if xattr -p com.apple.quarantine "$f" 2> /dev/null; then
+                echo "::error::$f is still quarantined after installing $name"
+                exit 1
+              fi
+            done
+          done
+
   ci-success:
     name: ci-success
     if: always()
-    needs: [rust, fmt, lint, test, deny, dco]
+    needs: [rust, fmt, lint, test, deny, dco, casks]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed
