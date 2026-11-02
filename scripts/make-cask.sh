@@ -24,6 +24,7 @@ repo="${1:?usage: make-cask.sh REPOSITORY TAG}"
 tag="${2:?}"
 version="${tag#v}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
+mkdir -p "$here/Casks"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
