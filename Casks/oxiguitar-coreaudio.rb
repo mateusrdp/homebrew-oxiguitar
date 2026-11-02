@@ -11,7 +11,7 @@ cask "oxiguitar-coreaudio" do
 
   # The plugin is ad-hoc signed, not notarized (no Apple certificate is paid
   # for), so the mark the download leaves on it is taken off.
-  postflight do # rubocop:disable Cask/InstallSteps
+  postflight do
     [
       "#{Dir.home}/Library/Application Support/OxiGuitar/plugins/audio-coreaudio-0.1.0-macos-universal.oxp",
     ].each do |path|
