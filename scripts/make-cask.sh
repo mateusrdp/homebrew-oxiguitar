@@ -131,7 +131,7 @@ cask "$cask" do
 ${depends}${artifacts}
   # The plugin is ad-hoc signed, not notarized (no Apple certificate is paid
   # for), so the mark the download leaves on it is taken off.
-  postflight do # rubocop:disable Cask/InstallSteps
+  postflight do
     [
 ${paths}    ].each do |path|
       system_command "/usr/bin/xattr", args: ["-d", "com.apple.quarantine", path], must_succeed: false
