@@ -15,9 +15,10 @@ brew install --cask oxiguitar
 ```
 
 `oxiguitar` brings the essential plugins (`oxiguitar-guitarpro` and
-`oxiguitar-midi`). The others are casks of the same name pattern, such as
-`oxiguitar-wav` or `oxiguitar-coreaudio`; `brew upgrade` keeps all of them
-current.
+`oxiguitar-midi`) and suggests, in what `brew` prints after installing it,
+`oxiguitar-nam` (amp models) and `oxiguitar-eq` (an equalizer). The others are
+casks of the same name pattern, such as `oxiguitar-wav` or
+`oxiguitar-coreaudio`; `brew upgrade` keeps all of them current.
 
 A plugin cask puts the plugin's file in
 `~/Library/Application Support/OxiGuitar/plugins` and takes off the quarantine
