@@ -6,7 +6,10 @@
 # release's macOS file and its SHA256SUMS:
 #   - the core (mateusrdp/oxiguitar): OxiGuitar-VERSION-macos-universal.dmg,
 #     cask "oxiguitar", which installs OxiGuitar.app and depends on the
-#     essential plugins (CORE_DEPENDS, default "oxiguitar-guitarpro oxiguitar-midi");
+#     essential plugins (CORE_DEPENDS, default "oxiguitar-guitarpro oxiguitar-midi")
+#     and suggests others in its caveats (CORE_SUGGESTS, default
+#     "oxiguitar-nam oxiguitar-eq", as the .deb and .rpm suggest them; casks
+#     have no "suggests" of their own);
 #   - a plugin (any other repository): oxiguitar-NAME-VERSION-macos-universal.zip,
 #     cask "oxiguitar-NAME", which puts each .oxp of the zip in
 #     ~/Library/Application Support/OxiGuitar/plugins and takes the quarantine
@@ -58,6 +61,18 @@ if [[ "$repo" == "mateusrdp/oxiguitar" ]]; then
     for c in ${CORE_DEPENDS-oxiguitar-guitarpro oxiguitar-midi}; do
         depends+="  depends_on cask: \"mateusrdp/oxiguitar/$c\""$'\n'
     done
+    suggests=""
+    for c in ${CORE_SUGGESTS-oxiguitar-nam oxiguitar-eq}; do
+        suggests+=" mateusrdp/oxiguitar/$c"
+    done
+    caveats=""
+    if [[ -n "$suggests" ]]; then
+        # Casks put caveats last, after zap.
+        caveats=$'\n\n'"  caveats <<~EOS
+    Suggested plugins, each a cask of its own:
+      brew install --cask$suggests
+  EOS"
+    fi
     cat > "$here/Casks/oxiguitar.rb" <<CASK
 cask "oxiguitar" do
   version "$version"
@@ -74,7 +89,7 @@ $depends
   zap trash: [
     "~/Library/Application Support/OxiGuitar",
     "~/Library/Caches/OxiGuitar",
-  ]
+  ]$caveats
 end
 CASK
     echo "Casks/oxiguitar.rb: $version"
