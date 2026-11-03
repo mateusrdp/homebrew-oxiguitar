@@ -46,7 +46,7 @@ jobs:
           fi
           [[ "$REPOSITORY" =~ ^mateusrdp/oxiguitar(-[a-z0-9-]+)?$ ]] || { echo "::error::Not an OxiGuitar repository: $REPOSITORY"; exit 1; }
           [[ "$TAG" =~ ^v[0-9][0-9A-Za-z.+~-]*$ ]] || { echo "::error::Not a version tag: $TAG"; exit 1; }
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: develop
           token: ${{ secrets.PACKAGES_TOKEN }}
