@@ -57,7 +57,8 @@ if [[ "$repo" == "mateusrdp/oxiguitar" ]]; then
     download SHA256SUMS
     sum="$(sum_of "$file")"
     [[ -n "$sum" ]] || { echo "::error::$file is not in SHA256SUMS"; exit 1; }
-    depends=""
+    # brew style (Homebrew/OSDependsOn) wants a cask with an app to say it is macOS-only.
+    depends="  depends_on :macos"$'\n'
     for c in ${CORE_DEPENDS-oxiguitar-guitarpro oxiguitar-midi}; do
         depends+="  depends_on cask: \"mateusrdp/oxiguitar/$c\""$'\n'
     done
