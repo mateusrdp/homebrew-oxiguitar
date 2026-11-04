@@ -7,9 +7,9 @@ cask "oxiguitar" do
   desc "Guitar tablature and score viewer, editor and player, written in Rust"
   homepage "https://github.com/mateusrdp/oxiguitar"
 
-  depends_on :macos
   depends_on cask: "mateusrdp/oxiguitar/oxiguitar-guitarpro"
   depends_on cask: "mateusrdp/oxiguitar/oxiguitar-midi"
+  depends_on :macos
 
   app "OxiGuitar.app"
 
